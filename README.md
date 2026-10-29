@@ -17,9 +17,9 @@ A RESTful Web API built with **ASP.NET Core** to manage personal expenses and tr
 
 - **Language:** C#
 - **Framework:** ASP.NET Core Web API
-- **Database:** SQL Server (if configured in your project)
+- **Database:** SQL Server 
 - **Authentication:** JWT Bearer Authentication
-- **API Documentation:** Swagger / OpenAPI
+- **API Documentation:** Swagger 
 - **Tools:** Visual Studio, Git, GitHub
 
 ## 📂 Project Overview
@@ -40,7 +40,7 @@ Core functionality includes:
 
 - Visual Studio
 - .NET SDK compatible with the project
-- SQL Server, if required by the configured database
+- SQL Server
 
 ### Installation
 
@@ -76,7 +76,7 @@ dotnet run
 
 **6. Test the API**
 
-Open the Swagger URL displayed when the application starts, if Swagger is enabled in the current environment.
+Open the Swagger URL displayed when the application starts.
 
 ## 🔒 Authentication Flow
 
@@ -106,8 +106,6 @@ Test the authentication flow and verify that protected endpoints require a valid
 - Develop an ASP.NET Core MVC frontend
 - Add expense categories and filtering
 - Implement pagination and improved validation
-- Add automated unit and integration tests
-- Deploy the application to the cloud
 
 ## 👩‍💻 Author
 
