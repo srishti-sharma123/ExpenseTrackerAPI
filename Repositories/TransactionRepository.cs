@@ -19,6 +19,14 @@ namespace ExpenseTrackerAPI.Repositories
             return await _context.Transactions.ToListAsync();
         }
 
+        // for getting access for the authorise users and to see their own trasacrions 
+        public async Task<IEnumerable<Transaction>> GetAllByUserIdAsync(int userId)
+        {
+            return await _context.Transactions
+                .Where(t => t.UserId == userId)
+                .ToListAsync();
+        }
+
         public async Task<Transaction> CreateAsync(Transaction transaction)
         {
             await _context.Transactions.AddAsync(transaction);

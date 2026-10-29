@@ -1,6 +1,7 @@
 ﻿using ExpenseTrackerAPI.Models.Domain;
 using ExpenseTrackerAPI.Models.DTOs.Auth;
 using ExpenseTrackerAPI.Repositories.Interfaces;
+using ExpenseTrackerAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTrackerAPI.Controllers
@@ -10,10 +11,12 @@ namespace ExpenseTrackerAPI.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IUserRepository _userRepository;
+        private readonly ITokenService _tokenService;
 
-        public AuthController(IUserRepository userRepository)
+        public AuthController(IUserRepository userRepository, ITokenService tokenService)
         {
             _userRepository = userRepository;
+            _tokenService = tokenService;
         }
 
         [HttpPost("Register")]
@@ -24,11 +27,18 @@ namespace ExpenseTrackerAPI.Controllers
                 return BadRequest(ModelState);
             }
 
+            var existingUser = await _userRepository.GetByEmailAsync(request.Email);
+
+            if (existingUser != null)
+            {
+                return BadRequest("Email already exists");
+            }
+
             var user = new User
             {
                 Name = request.Name,
                 Email = request.Email,
-                PasswordHash = request.Password, // temporary
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password), // temporary
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -51,12 +61,17 @@ namespace ExpenseTrackerAPI.Controllers
                 return Unauthorized("Invalid email or password");
             }
 
-            if (user.PasswordHash != request.Password)
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return Unauthorized("Invalid email or password");
             }
 
-            return Ok("Login successful");
+            var token = _tokenService.CreateToken(user);
+
+            return Ok(new
+            {
+                Token = token
+            });
         }
 
         [HttpGet]

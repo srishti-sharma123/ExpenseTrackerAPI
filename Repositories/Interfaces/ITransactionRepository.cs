@@ -3,6 +3,7 @@ namespace ExpenseTrackerAPI.Repositories.Interfaces;
 public interface ITransactionRepository
 {
     Task<IEnumerable<Transaction>> GetAllAsync();
+    Task<IEnumerable<Transaction>> GetAllByUserIdAsync(int userId);
 
     Task<Transaction?> GetByIdAsync(int id);
 

@@ -3,10 +3,13 @@ using ExpenseTrackerAPI.Models.DTOs.Category;
 using ExpenseTrackerAPI.Models.DTOs.Transaction;
 using ExpenseTrackerAPI.Repositories;
 using ExpenseTrackerAPI.Repositories.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ExpenseTrackerAPI.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class TransactionsController : ControllerBase
@@ -19,35 +22,74 @@ namespace ExpenseTrackerAPI.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> GetAllTransactions()
         {
-            var transactions = await _transactionRepository.GetAllAsync();
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var transactionDtos = transactions.Select(t => new TransactionDto
+            var transactions = await _transactionRepository.GetAllByUserIdAsync(userId);
+
+            var transactionDtos = transactions.Select(transaction => new TransactionDto
             {
-                Id = t.Id,
-                Amount = t.Amount,
-                TransactionDate = t.TransactionDate,
-                Description = t.Description,
-                PaymentMethod = t.PaymentMethod,
-                PaidTo = t.PaidTo,
-                Type = t.Type,
-                UserId = t.UserId,
-                CategoryId = t.CategoryId,
-                CreatedAt = t.CreatedAt
+                Id = transaction.Id,
+                Amount = transaction.Amount,
+                TransactionDate = transaction.TransactionDate,
+                Description = transaction.Description,
+                PaymentMethod = transaction.PaymentMethod,
+                PaidTo = transaction.PaidTo,
+                Type = transaction.Type,
+                UserId = transaction.UserId,
+                CategoryId = transaction.CategoryId,
+                CreatedAt = transaction.CreatedAt
             });
 
             return Ok(transactionDtos);
         }
 
+        //[HttpGet("{id}")]
+        //public async Task<IActionResult> GetTransactionById(int id)
+        //{
+        //    var transaction = await _transactionRepository.GetByIdAsync(id);
+
+        //    if (transaction == null)
+        //    {
+        //        return NotFound();
+        //    }
+
+        //    var transactionDto = new TransactionDto
+        //    {
+        //        Id = transaction.Id,
+        //        Amount = transaction.Amount,
+        //        TransactionDate = transaction.TransactionDate,
+        //        Description = transaction.Description,
+        //        PaymentMethod = transaction.PaymentMethod,
+        //        PaidTo = transaction.PaidTo,
+        //        Type = transaction.Type,
+        //        UserId = transaction.UserId,
+        //        CategoryId = transaction.CategoryId,
+        //        CreatedAt = transaction.CreatedAt
+        //    };
+
+        //    return Ok(transactionDto);
+        //}
+
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<IActionResult> GetTransactionById(int id)
         {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
             var transaction = await _transactionRepository.GetByIdAsync(id);
 
             if (transaction == null)
             {
                 return NotFound();
+            }
+
+            // User is trying to access someone else's transaction
+            if (transaction.UserId != userId)
+            {
+                return Forbid();
             }
 
             var transactionDto = new TransactionDto
@@ -111,11 +153,28 @@ namespace ExpenseTrackerAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> UpdateTransaction(int id, UpdateTransactionRequestDto request)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
+            }
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            // Check whether the transaction exists
+            var existingTransaction = await _transactionRepository.GetByIdAsync(id);
+
+            if (existingTransaction == null)
+            {
+                return NotFound();
+            }
+
+            // Check ownership
+            if (existingTransaction.UserId != userId)
+            {
+                return Forbid();
             }
 
             var transaction = new Transaction
@@ -127,7 +186,7 @@ namespace ExpenseTrackerAPI.Controllers
                 PaymentMethod = request.PaymentMethod,
                 PaidTo = request.PaidTo,
                 Type = request.Type,
-                UserId = request.UserId,
+                UserId = userId,          // Use logged-in user's ID
                 CategoryId = request.CategoryId
             };
 
@@ -154,20 +213,31 @@ namespace ExpenseTrackerAPI.Controllers
 
             return Ok(transactionDto);
         }
-
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteTransaction(int id)
         {
-            var deletedTransaction = await _transactionRepository.DeleteAsync(id);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            if (deletedTransaction == null)
+            // Check if the transaction exists
+            var existingTransaction = await _transactionRepository.GetByIdAsync(id);
+
+            if (existingTransaction == null)
             {
                 return NotFound();
             }
 
+            // Check ownership
+            if (existingTransaction.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            var deletedTransaction = await _transactionRepository.DeleteAsync(id);
+
             var transactionDto = new TransactionDto
             {
-                Id = deletedTransaction.Id,
+                Id = deletedTransaction!.Id,
                 Amount = deletedTransaction.Amount,
                 TransactionDate = deletedTransaction.TransactionDate,
                 Description = deletedTransaction.Description,
